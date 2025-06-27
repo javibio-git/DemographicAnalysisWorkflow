@@ -1,0 +1,46 @@
+---
+title: "Sequencing pre-processing"
+author: "Javier Carpinteyro Ponce"
+format: html
+editor: visual
+code-annotations: hover
+date: 06/27/2025
+editor_options: 
+  chunk_output_type: console
+toc: true
+self-contained: true
+---
+
+This book presents a workflow for preprocessing whole-genome short-read sequencing data in preparation for variant calling with **FreeBayes**. While specific tools are used, they can be substituted as needed. Please note that some steps can be done in parallel.
+
+### Step 1: Trim raw reads
+
+Raw reads need to be trimmed first. You can use the nf-fastp Nextflow workflow to run `fastp` for a large number of samples/populations. The workflow is flexible as it can be executed in your local machine, but using an HPC cluster is recommended.
+
+On a slurm-based HPC you can run the workflow as follows
+
+``` {#nf-fastp .bash}
+nextflow run nf-fastp/ --samplesheet ./samplesheet.csv --outdir ./results -profile slurm -resume
+```
+
+Refer to the `nf-fastp` main repository for details on how to set up the `samplesheet.csv`: <https://github.com/javibio-git/nf-fastp>.
+
+### Step 2: Preprocess reference genome
+
+If your Fasta file is in interleaved format, make sure you do not have lines with different sequence lengths. To make sure you have all your sequence lines with the same number of characters per line consider using `seqtk`.
+
+Yoy can use `seqtk` to make all lines the same character length. Only the last line of a specific sequence(id) is allowed to be shorter for `samtools` :
+
+``` {#seqtk .bash}
+seqtk seq -l 60 reference.fasta > reference_formatted.fasta
+```
+
+Once you have your Fasta file in the right format, index the file with `samtools` and `bwa` :
+
+-   Index reference with `samtools`
+
+    ``` {#samtools_index .bash}
+    samtools faidx dper111.35_formatted.fasta
+    ```
+
+-   Index reference with bwa
